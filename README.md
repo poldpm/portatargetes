@@ -53,10 +53,27 @@ Sense full connectat (`endpoint` buit a `js/config.js`) la web funciona en
 
    Prem **Implementa** i copia l'URL que acaba en `/exec`.
 5. Aquella URL va a `js/config.js`, dins de `endpoint: ''`.
+6. Executa també la funció **`provaCorreu`** (▶): demana el permís per enviar
+   els correus de confirmació i te n'envia un de prova.
 
 Això d'implementar només es fa **aquest primer cop**. Si més endavant es toca
 `Code.gs`, cal fer *Implementa → Gestiona les implementacions → editar → Versió
 nova* perquè la web faci servir el codi nou.
+
+## Que no se'n perdi cap
+
+- **Moltes alhora:** el full rep les comandes una darrere l'altra (torn de 20 s
+  com a màxim). Si una no entrés, la mestra veu un error, no un «Apuntat!».
+- **«Apuntat!» només si és al full.** La web només ho diu quan el full ha
+  contestat que l'ha desada. Si la resposta es perd pel camí, la web pregunta al
+  full si la referència hi és abans de dir res.
+- **Tornar a prémer el botó és segur.** Mentre la comanda sigui la mateixa, es
+  reenvia amb la mateixa referència i el full no l'apunta dues vegades.
+- **Sense connexió:** surt «La comanda NO consta com a enviada».
+- **Correu de confirmació:** cada mestra rep un correu amb el logotip, el model,
+  el text i la referència. La columna **Confirmació** del full diu si s'ha enviat.
+  Qui diu que ja va triar i no té el correu, no va arribar a fer la comanda.
+  (Límit de Google: 100 correus al dia amb un compte normal.)
 
 ## Les comandes
 

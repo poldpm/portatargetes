@@ -12,7 +12,8 @@
 
 var FULL_COMANDES = 'Comandes';
 var FULL_PRODUCCIO = 'Producció';
-var CAPCALERA = ['Data', 'Referència', 'Logotip', 'Correu', 'Text a gravar', 'Model', 'Mida lletra (mm)', 'Estat'];
+var CAPCALERA = ['Data', 'Referència', 'Logotip', 'Correu', 'Text a gravar', 'Model', 'Mida lletra (mm)', 'Estat', 'Confirmació'];
+var NOM_MODEL = { 'A granat': 'Clàssic granat', 'A blanc': 'Clàssic blanc', 'B': 'Etiqueta', 'Pro A': 'Clàssic', 'Pro B': 'Etiqueta' };
 var MODELS_VALIDS = ['A granat', 'A blanc', 'B', 'Pro A', 'Pro B'];
 var ESCOLES_VALIDES = ['Vedruna Escorial Vic', 'Vedruna Pro Vic'];
 
@@ -40,12 +41,35 @@ function prepara() {
   return 'Fet';
 }
 
-function doGet() {
+/**
+ * Executa-la UN COP des de l'editor (botó ▶) després d'enganxar aquesta versió:
+ * demana el permís per enviar correus i te n'envia un de prova a tu.
+ */
+function provaCorreu() {
+  var jo = Session.getEffectiveUser().getEmail();
+  MailApp.sendEmail({ to: jo, subject: 'Portatargetes: el correu de confirmació funciona',
+    htmlBody: 'Si reps això, cada mestra rebrà un correu com aquest quan faci la comanda.' });
+  return 'Correu enviat a ' + jo + '. Et queden ' + MailApp.getRemainingDailyQuota() + ' correus per avui.';
+}
+
+function doGet(e) {
+  var ref = e && e.parameter && e.parameter.ref;
+  if (ref) return json_({ ok: true, ref: ref, existeix: filaDe_(full_(), String(ref)) > 0 });
   return json_({ ok: true, servei: 'portatargetes', comandes: Math.max(0, full_().getLastRow() - 1) });
+}
+
+// Fila on és la referència (0 si no hi és)
+function filaDe_(sh, ref) {
+  var n = sh.getLastRow();
+  if (n < 2) return 0;
+  var refs = sh.getRange(2, 2, n - 1, 1).getValues();
+  for (var i = refs.length - 1; i >= 0; i--) if (refs[i][0] === ref) return i + 2;
+  return 0;
 }
 
 function doPost(e) {
   var lock = LockService.getScriptLock();
+  var desada = null;
   try {
     lock.waitLock(20000);
     var d = JSON.parse((e && e.postData && e.postData.contents) || '{}');
@@ -62,19 +86,45 @@ function doPost(e) {
     if (!ref) return json_({ ok: false, error: 'Falta la referència.' });
 
     var sh = full_();
-    // si el navegador ha enviat la mateixa comanda dues vegades, no es duplica
-    var n = sh.getLastRow();
-    if (n > 1) {
-      var refs = sh.getRange(2, 2, n - 1, 1).getValues();
-      for (var i = 0; i < refs.length; i++) if (refs[i][0] === ref) return json_({ ok: true, ref: ref, repetida: true });
-    }
-    sh.appendRow([new Date(), ref, escola, segur_(correu), segur_(text), model, mida, '']);
-    return json_({ ok: true, ref: ref });
+    if (!sh.getRange(1, 9).getValue()) sh.getRange(1, 9).setValue('Confirmació').setFontWeight('bold');
+    // si el navegador ha enviat la mateixa comanda dues vegades, no es duplica (ni es torna a enviar el correu)
+    if (filaDe_(sh, ref)) return json_({ ok: true, ref: ref, repetida: true });
+    sh.appendRow([new Date(), ref, escola, segur_(correu), segur_(text), model, mida, '', '']);
+    SpreadsheetApp.flush();                       // desada de debò abans de dir-li a la mestra que sí
+    desada = { fila: sh.getLastRow(), sh: sh };
   } catch (err) {
     return json_({ ok: false, error: 'Error del servidor: ' + err.message });
   } finally {
     try { lock.releaseLock(); } catch (x) {}
   }
+  // El correu, fora del torn: així no fa esperar les comandes que venen darrere.
+  // Si falla, la comanda ja és desada igualment; queda apuntat a «Confirmació».
+  var estatCorreu = 'enviat';
+  try { correuConfirmacio_(correu, ref, escola, model, text); }
+  catch (err) { estatCorreu = 'error: ' + err.message; }
+  try { desada.sh.getRange(desada.fila, 9).setValue(estatCorreu === 'enviat' ? 'correu enviat' : estatCorreu); } catch (x) {}
+  return json_({ ok: true, ref: ref, correu: estatCorreu === 'enviat' });
+}
+
+function correuConfirmacio_(correu, ref, escola, model, text) {
+  var nomModel = NOM_MODEL[model] || model;
+  var esc = function (v) { return String(v).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); };
+  MailApp.sendEmail({
+    to: correu,
+    name: 'Portatargetes Vedruna',
+    subject: 'Comanda del portatargetes rebuda (' + ref + ')',
+    htmlBody:
+      '<div style="font-family:Arial,sans-serif;font-size:15px;color:#1b1b1b;max-width:520px">' +
+      '<p>Hola,</p><p>Hem rebut la teva comanda del portatargetes. Aquestes són les dades:</p>' +
+      '<table style="border-collapse:collapse">' +
+      '<tr><td style="padding:4px 14px 4px 0;color:#7a1f34">Logotip</td><td><b>' + esc(escola) + '</b></td></tr>' +
+      '<tr><td style="padding:4px 14px 4px 0;color:#7a1f34">Model</td><td><b>' + esc(nomModel) + '</b></td></tr>' +
+      '<tr><td style="padding:4px 14px 4px 0;color:#7a1f34">Text a la tapa</td><td><b>' + (text ? '«' + esc(text) + '»' : 'Sense nom') + '</b></td></tr>' +
+      '<tr><td style="padding:4px 14px 4px 0;color:#7a1f34">Referència</td><td>' + esc(ref) + '</td></tr>' +
+      '</table>' +
+      '<p>S\'imprimirà exactament així. Si hi ha alguna cosa que no està bé, respon aquest correu.</p>' +
+      '</div>'
+  });
 }
 
 function full_() {

@@ -537,39 +537,67 @@ $('#torna').addEventListener('click', () => { $('#revisa').hidden = true; $('#te
 $('#revisa').addEventListener('click', (e) => { if (e.target.id === 'revisa') $('#revisa').hidden = true; });
 
 function novaRef() { return 'PT-' + Date.now().toString(36).slice(-4).toUpperCase() + Math.random().toString(36).slice(2, 4).toUpperCase(); }
+// La referència es manté mentre la comanda sigui la mateixa: si la mestra torna a prémer
+// «Envia» perquè la primera vegada s'ha tallat, el full la reconeix i no l'apunta dues vegades.
+let refPendent = null, dadesPendents = '';
+function refPer(dades) {
+  const clau = JSON.stringify([dades.escola, dades.correu, dades.text, dades.model]);
+  if (!refPendent || clau !== dadesPendents) { refPendent = novaRef(); dadesPendents = clau; }
+  return refPendent;
+}
+const espera = (ms) => new Promise((r) => setTimeout(r, ms));
+async function ambTempsMax(p, ms) {
+  let t; const lim = new Promise((_, no) => { t = setTimeout(() => no(new Error('el servidor no respon')), ms); });
+  try { return await Promise.race([p, lim]); } finally { clearTimeout(t); }
+}
+// Pregunta al full si la referència hi és. true / false / null (no ho sap)
+async function hiEs(url, ref) {
+  for (let i = 0; i < 4; i++) {
+    try {
+      const j = await ambTempsMax(fetch(url + (url.includes('?') ? '&' : '?') + 'ref=' + encodeURIComponent(ref)).then((r) => r.json()), 20000);
+      if (typeof j.existeix === 'boolean') { if (j.existeix) return true; }
+      else return null;
+    } catch (e) { /* tornem-hi */ }
+    await espera(1500);
+  }
+  return false;
+}
 async function enviaServidor(dades) {
   const url = (window.PT_CONFIG && window.PT_CONFIG.endpoint || '').trim();
   if (!url) return { prova: true };
   const cos = JSON.stringify(dades);
   try {
-    const r = await fetch(url, { method: 'POST', body: cos, headers: { 'Content-Type': 'text/plain;charset=utf-8' } });
+    const r = await ambTempsMax(fetch(url, { method: 'POST', body: cos, headers: { 'Content-Type': 'text/plain;charset=utf-8' } }), 45000);
     const j = await r.json();
     if (!j.ok) throw new Error(j.error || 'El servidor no ha acceptat la comanda.');
     return j;
   } catch (e) {
-    if (e instanceof TypeError) {   // el navegador no ens deixa llegir la resposta: s'envia igualment
-      await fetch(url, { method: 'POST', body: cos, mode: 'no-cors', headers: { 'Content-Type': 'text/plain;charset=utf-8' } });
-      return { ok: true };
-    }
-    throw e;
+    if (!(e instanceof TypeError) || !navigator.onLine) throw e;
+    // El navegador no ha pogut llegir la resposta. Pot ser que hagi arribat igualment:
+    // ho preguntem al full abans de dir res. Mai no diem «Apuntat!» sense saber-ho.
+    if (await hiEs(url, dades.ref)) return { ok: true };
+    throw new Error('no hem pogut confirmar que hagi arribat');
   }
 }
 $('#envia').addEventListener('click', async () => {
   const b = $('#envia'); b.disabled = true; b.querySelector('span').textContent = 'Enviant…';
   const correu = $('#correu').value.trim().toLowerCase();
   const d = DEF[S.model];
-  const dades = { ref: novaRef(), escola: ESCOLES[S.escola].nom, correu, text: S.text, model: d.codi, modelId: d.id, midaLletra: S.ajust.mida };
+  const dades = { ref: '', escola: ESCOLES[S.escola].nom, correu, text: S.text, model: d.codi, modelId: d.id, midaLletra: S.ajust.mida };
+  dades.ref = refPer(dades);
   try {
     const r = await enviaServidor(dades);
+    refPendent = null;
     try { localStorage.setItem('pt-correu', correu); } catch (e) { /* res */ }
     $('#revisa').hidden = true;
     $('#ok-ref').textContent = dades.ref;
-    $('#ok-txt').textContent = `${d.nom} · ${ESCOLES[S.escola].nom}${S.text ? `, amb «${S.text}»` : ', sense nom'}. Quan estigui imprès, te'l farem arribar.`;
+    $('#ok-txt').textContent = `${d.nom} · ${ESCOLES[S.escola].nom}${S.text ? `, amb «${S.text}»` : ', sense nom'}. Quan estigui imprès, te'l farem arribar.` +
+      (r.correu ? ` T'hem enviat la confirmació a ${correu}.` : '');
     $('#ok-prova').hidden = !r.prova;
     $('#enviat').hidden = false; $('#un-altre').focus();
     celebra();
   } catch (e) {
-    error('No s\'ha pogut enviar. Comprova la connexió i torna-ho a provar. (' + e.message + ')', '#error-envia');
+    error('La comanda NO consta com a enviada (' + e.message + '). Comprova la connexió i torna a prémer «Envia la comanda»: si ja hagués arribat, no s\'apuntarà dues vegades.', '#error-envia');
   } finally { b.disabled = false; b.querySelector('span').textContent = 'Envia la comanda'; }
 });
 $('#un-altre').addEventListener('click', () => {
