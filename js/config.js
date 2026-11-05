@@ -3,5 +3,5 @@
 // (veure LLEGEIX-ME.md). Si és buida, la web funciona en mode de prova:
 // es pot fer tot, però les comandes no es guarden enlloc.
 window.PT_CONFIG = {
-  endpoint: ''
+  endpoint: 'https://script.google.com/macros/s/AKfycbwLnaVZ5nTm5Ekjs-t_1R2t2-FSAPZPnYkaRwemjFNEyNZk0KPz3QRN7fB5QD9J7TMRjw/exec'
 };
