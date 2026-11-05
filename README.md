@@ -24,6 +24,7 @@ Es veu igual a l'ordinador i al mòbil.
    s'hi escriu un nom a la tapa i apareixen els cinc models. Es pot saltar.
    Qui té activat «reduir el moviment» al dispositiu entra directament a la tria.
 2. **Quin logotip vols?**: dos grans botons, cadascun amb els seus models en 3D al damunt.
+   Clicar directament un dels portatargetes porta al configurador d'aquell model.
    Models: Escorial Vic → Clàssic granat, Clàssic blanc, Etiqueta; Pro Vic → Clàssic, Etiqueta.
    Al full hi van els codis de producció (A granat, A blanc, B, Pro A, Pro B).
 3. **Configurador**:

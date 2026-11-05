@@ -201,7 +201,7 @@ function preparaModel(def, gltf) {
   inner.add(decal);
   inner.scale.setScalar(0.01);
   inner.position.set(-0.30, -def.h * 0.005, -0.021);
-  const holder = new THREE.Group(); holder.add(inner); holder.visible = false; scene.add(holder);
+  const holder = new THREE.Group(); holder.add(inner); holder.visible = false; holder.userData.id = def.id; scene.add(holder);
   const p = { x: 0, y: 0, z: 0, s: 0, rx: 0, ry: 0, rz: 0 };
   M[def.id] = { def, holder, inner, cv, ctx: cv.getContext('2d'), tex, p, t: { ...p }, pintat: null };
 }
@@ -655,6 +655,33 @@ canvas.addEventListener('pointermove', (e) => {
 });
 const deixa = () => { drag = null; S.ultimToc = rellotge; };
 canvas.addEventListener('pointerup', deixa); canvas.addEventListener('pointercancel', deixa);
+
+// A la tria de logotip, clicar un portatargetes porta directe al configurador d'aquell model
+const raig = new THREE.Raycaster(), _punt = new THREE.Vector2();
+function modelSota(x, y) {
+  if (!renderer || S.etapa !== 'escola') return null;
+  _punt.set(x / innerWidth * 2 - 1, -(y / innerHeight) * 2 + 1);
+  raig.setFromCamera(_punt, camera);
+  const vistos = ORDRE.map((id) => M[id] && M[id].holder).filter((h) => h && h.visible);
+  const toc = raig.intersectObjects(vistos, true)[0];
+  let o = toc && toc.object;
+  while (o && !o.userData.id) o = o.parent;
+  return o ? o.userData.id : null;
+}
+let hoverModel = false;
+canvas.addEventListener('pointermove', (e) => {
+  if (S.etapa !== 'escola' || e.pointerType === 'touch') return;
+  const id = modelSota(e.clientX, e.clientY);
+  canvas.style.cursor = id ? 'pointer' : '';
+  if (id) { S.hover = DEF[id].escola; hoverModel = true; } else if (hoverModel) { S.hover = null; hoverModel = false; }
+});
+canvas.addEventListener('click', (e) => {
+  const id = modelSota(e.clientX, e.clientY);
+  if (!id) return;
+  canvas.style.cursor = ''; hoverModel = false; S.hover = null;
+  S.model = id;                       // entraConfig respecta el model triat si és del mateix logotip
+  entraConfig(DEF[id].escola);
+});
 addEventListener('pointermove', (e) => { S.ratoli.x = e.clientX / innerWidth * 2 - 1; S.ratoli.y = e.clientY / innerHeight * 2 - 1; });
 
 // ───────────────────────── bucle ─────────────────────────
@@ -770,7 +797,7 @@ function frame(now) {
 }
 
 // per gravar l'anunci en vídeo fotograma a fotograma (?gravacio)
-window.__pt = { S, pas(t) { S.introT = t; frame(performance.now()); } };
+window.__pt = { S, M, camera, pas(t) { S.introT = t; frame(performance.now()); } };
 // ───────────────────────── arrencada ─────────────────────────
 (async function () {
   try { await carrega(); }
