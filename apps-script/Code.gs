@@ -114,10 +114,16 @@ function correuConfirmacio_(correu, ref, escola, model, text, mida, fotoB64) {
     to: correu,
     name: 'Portatargetes Vedruna',
     subject: (text ? '«' + text + '» ' : 'El teu portatargetes ') + 'ja és a la cua d\'impressió · ' + ref,
-    htmlBody: htmlCorreu_({ ref: ref, escola: escola, model: model, text: text, mida: mida, foto: fotoB64 ? 'cid:portatargetes' : '' }),
+    htmlBody: '',
     body: textCorreu_({ ref: ref, escola: escola, model: model, text: text })
   };
-  if (fotoB64) opcions.inlineImages = { portatargetes: Utilities.newBlob(Utilities.base64Decode(fotoB64), 'image/jpeg', ref + '.jpg') };
+  // La imatge va SEMPRE dins del correu (no enllaçada a la web): així es veu a tots els programes de correu,
+  // també els que no carreguen imatges de fora o les van a buscar abans que la web estigui publicada.
+  var blob = null;
+  if (fotoB64) blob = Utilities.newBlob(Utilities.base64Decode(fotoB64), 'image/jpeg', ref + '.jpg');
+  else { try { blob = UrlFetchApp.fetch(WEB + 'assets/img/correu.jpg').getBlob().setName('portatargetes.jpg'); } catch (x) { blob = null; } }
+  if (blob) opcions.inlineImages = { portatargetes: blob };
+  opcions.htmlBody = htmlCorreu_({ ref: ref, escola: escola, model: model, text: text, mida: mida, foto: blob ? 'cid:portatargetes' : '' });
   MailApp.sendEmail(opcions);
 }
 
