@@ -585,6 +585,7 @@ $('#envia').addEventListener('click', async () => {
   const d = DEF[S.model];
   const dades = { ref: '', escola: ESCOLES[S.escola].nom, correu, text: S.text, model: d.codi, modelId: d.id, midaLletra: S.ajust.mida };
   dades.ref = refPer(dades);
+  dades.foto = fotoComanda();
   try {
     const r = await enviaServidor(dades);
     refPendent = null;
@@ -603,6 +604,28 @@ $('#envia').addEventListener('click', async () => {
 $('#un-altre').addEventListener('click', () => {
   $('#enviat').hidden = true; $('#text-nom').value = ''; refaText(); giraA('gira'); $('#text-nom').focus();
 });
+// Foto del seu portatargetes per al correu de confirmació: el model triat, girat de tres quarts
+// perquè es vegi el nom, sobre l'escena fosca de la web. Es fa en un fotograma i es torna a deixar tot com estava.
+function fotoComanda() {
+  if (!renderer || !S.model || !M[S.model]) return '';
+  const m = M[S.model], W = 600, H = 700, pr = renderer.getPixelRatio(), vis = {};
+  try {
+    for (const id in M) { vis[id] = M[id].holder.visible; M[id].holder.visible = id === S.model; }
+    m.holder.position.set(0, 0, 0); m.holder.rotation.set(.04, Math.PI - .42, 0); m.holder.scale.setScalar(1);
+    renderer.setPixelRatio(1); composer.setPixelRatio(1);
+    renderer.setSize(W, H, false); composer.setSize(W, H);
+    camera.aspect = W / H; camera.clearViewOffset(); camera.updateProjectionMatrix();
+    camera.position.set(.35, .16, 2.55); camera.lookAt(0, .04, 0);
+    escaner.visible = false; halo.material.opacity = .45;
+    composer.render();
+    return renderer.domElement.toDataURL('image/jpeg', .86).split(',')[1] || '';
+  } catch (e) { return ''; }
+  finally {
+    for (const id in vis) M[id].holder.visible = vis[id];
+    renderer.setPixelRatio(pr); composer.setPixelRatio(pr); redimensiona();
+  }
+}
+
 function celebra() {
   S.gira = false; S.yawObjectiu = S.yaw + Math.PI * 2 + angNorm(Math.PI - S.yaw); marcaCara('darrere');
   S.impuls = 1.4; escaneja(0, 1.3, .1, 1.2, -.75, .8);

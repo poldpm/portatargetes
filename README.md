@@ -70,8 +70,9 @@ nova* perquè la web faci servir el codi nou.
 - **Tornar a prémer el botó és segur.** Mentre la comanda sigui la mateixa, es
   reenvia amb la mateixa referència i el full no l'apunta dues vegades.
 - **Sense connexió:** surt «La comanda NO consta com a enviada».
-- **Correu de confirmació:** cada mestra rep un correu amb el logotip, el model,
-  el text i la referència. La columna **Confirmació** del full diu si s'ha enviat.
+- **Correu de confirmació:** cada mestra rep un correu amb el disseny de la web,
+  una foto en 3D del SEU portatargetes amb el seu nom (la fa la web en enviar),
+  el logotip, el model, el text i la referència. `provaCorreu` n'envia un d'exemple. La columna **Confirmació** del full diu si s'ha enviat.
   Qui diu que ja va triar i no té el correu, no va arribar a fer la comanda.
   (Límit de Google: 100 correus al dia amb un compte normal.)
 
