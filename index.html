@@ -1,0 +1,187 @@
+<!doctype html>
+<html lang="ca">
+<head>
+<meta charset="utf-8">
+<title>Portatargetes Vedruna</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="description" content="Tria el teu portatargetes Vedruna, personalitza'l amb el teu nom i fes-ne la comanda.">
+<meta name="theme-color" content="#0b0608">
+<meta property="og:title" content="Portatargetes Vedruna">
+<meta property="og:description" content="El portatargetes Vedruna: tria el teu model i posa-hi el teu nom.">
+<meta property="og:image" content="assets/img/portada.jpg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500&family=Fira+Sans:wght@200;300;400;500;700&display=swap">
+<link rel="stylesheet" href="css/estil.css">
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+} }
+</script>
+</head>
+<body>
+
+<canvas id="escena" aria-hidden="true"></canvas>
+<div class="gra" aria-hidden="true"></div>
+
+<!-- ───────── CÀRREGA ───────── -->
+<div id="carrega" class="carrega">
+  <div class="carrega-in">
+    <p class="mono carrega-eti">Vedruna · Vic</p>
+    <div class="carrega-barra"><i id="carrega-fil"></i></div>
+    <p class="mono carrega-pc"><span id="carrega-pc">0</span>%</p>
+  </div>
+</div>
+
+<!-- ───────── ANUNCI ───────── -->
+<section id="intro" class="etapa" hidden>
+  <div class="intro-txt">
+    <p class="mono eyebrow" data-t="0.3 1.8">Vedruna Escorial Vic · Vedruna Pro Vic</p>
+
+    <div class="intro-bloc" data-t="2.0 4.9">
+      <p class="mono eyebrow">Portatargetes · imprès en 3D</p>
+      <h2 class="intro-gran"><span>La teva targeta,</span><span class="accent">ben protegida.</span></h2>
+    </div>
+
+    <div class="intro-bloc" data-t="5.6 8.1">
+      <p class="mono eyebrow">Tapa del darrere · Fira Sans Bold · 6&nbsp;mm</p>
+      <h2 class="intro-gran"><span>Amb el teu nom.</span><span class="fi">O amb la paraula que vulguis.</span></h2>
+    </div>
+
+    <div class="intro-xifres" data-t="8.7 11.2">
+      <div><b>5</b><span>models</span></div>
+      <div><b>2</b><span>logotips</span></div>
+      <div><b>1</b><span>nom</span></div>
+    </div>
+
+    <div class="intro-final" data-t="12.0 99">
+      <p class="mono eyebrow">60 × 110 × 4,2 mm · tapa amb clic</p>
+      <h1 class="intro-titol">Portatargetes <b>Vedruna</b></h1>
+    </div>
+  </div>
+  <div class="intro-hud mono" aria-hidden="true">
+    <span>REC</span><span id="intro-tc">00:00</span>
+  </div>
+  <button id="salta" class="salta mono" type="button">Salta l'anunci <span aria-hidden="true">→</span></button>
+</section>
+
+<!-- ───────── TRIA L'ESCOLA ───────── -->
+<section id="escola" class="etapa" hidden>
+  <header class="escola-cap">
+    <p class="mono eyebrow">Pas 1 de 3</p>
+    <h1 class="h-etapa">Quin logotip vols?</h1>
+  </header>
+  <div class="escola-opcions">
+    <button type="button" class="opcio" data-escola="escorial" id="opcio-escorial">
+      <span class="opcio-marc" aria-hidden="true"></span>
+      <span class="mono opcio-n">3 models</span>
+      <span class="opcio-nom">Vedruna <br><b>Escorial Vic</b></span>
+      <span class="mono opcio-det">Clàssic granat · Clàssic blanc · Etiqueta</span>
+      <span class="opcio-fletxa" aria-hidden="true">→</span>
+    </button>
+    <button type="button" class="opcio" data-escola="pro" id="opcio-pro">
+      <span class="opcio-marc" aria-hidden="true"></span>
+      <span class="mono opcio-n">2 models</span>
+      <span class="opcio-nom">Vedruna <br><b>Pro Vic</b></span>
+      <span class="mono opcio-det">Clàssic · Etiqueta</span>
+      <span class="opcio-fletxa" aria-hidden="true">→</span>
+    </button>
+  </div>
+  <button id="reveure" class="reveure mono" type="button"><span aria-hidden="true">↺</span> Torna a veure l'anunci</button>
+</section>
+
+<!-- ───────── CONFIGURADOR ───────── -->
+<section id="config" class="etapa" hidden>
+  <div class="visor-ctrl" role="group" aria-label="Gira el portatargetes">
+    <button type="button" class="vc" data-cara="davant" id="vc-davant">Davant</button>
+    <button type="button" class="vc" data-cara="darrere" id="vc-darrere">Darrere</button>
+    <button type="button" class="vc" data-cara="gira" id="vc-gira" aria-pressed="true">Gira</button>
+  </div>
+  <p class="visor-pista mono" aria-hidden="true">Arrossega per girar-lo</p>
+
+  <aside class="panell" id="panell">
+    <div class="panell-cap">
+      <button type="button" class="enrere mono" id="canvia-escola">← Canvia de logotip</button>
+      <p class="mono eyebrow" id="cfg-marca">Vedruna Escorial Vic</p>
+    </div>
+
+    <form id="form" novalidate>
+      <fieldset class="bloc">
+        <legend><span class="mono pas">02</span> Tria el model</legend>
+        <div class="models" id="models" role="radiogroup" aria-label="Models"></div>
+        <p class="model-desc" id="model-desc"></p>
+      </fieldset>
+
+      <fieldset class="bloc">
+        <legend><span class="mono pas">03</span> Personalitza'l</legend>
+        <label class="camp">
+          <span class="camp-eti">Què hi vols gravar a la tapa?</span>
+          <input id="text-nom" name="text" type="text" maxlength="40" autocomplete="off" spellcheck="false" placeholder="Ex.: Marta Puig">
+        </label>
+        <div class="mesura" aria-live="polite">
+          <div class="regle" aria-hidden="true"><i id="regle-fil"></i><span class="regle-max">44 mm</span></div>
+          <p class="mono mesura-txt"><span id="mesura-estat" class="xip">Sense nom</span> <span id="mesura-det"></span></p>
+        </div>
+        <div class="previs">
+          <div class="previs-svg" id="previs-svg" title="Mostra el darrere en 3D"></div>
+          <p class="mono previs-peu">Tapa del darrere<br>a mida real (mm)</p>
+        </div>
+      </fieldset>
+
+      <fieldset class="bloc">
+        <legend><span class="mono pas">04</span> El teu correu</legend>
+        <label class="camp">
+          <span class="camp-eti">Correu electrònic, perquè sapiguem de qui és</span>
+          <input id="correu" name="correu" type="email" maxlength="120" autocomplete="email" inputmode="email" autocapitalize="off" spellcheck="false" placeholder="nom@exemple.cat" required>
+        </label>
+        <p class="error" id="error" role="alert" hidden></p>
+        <button type="submit" class="cta" id="cta"><span>Revisa la comanda</span><i aria-hidden="true">→</i></button>
+      </fieldset>
+    </form>
+  </aside>
+</section>
+
+<!-- ───────── REVISA ───────── -->
+<div id="revisa" class="modal" hidden role="dialog" aria-modal="true" aria-labelledby="revisa-t">
+  <div class="modal-in">
+    <p class="mono eyebrow">Últim pas</p>
+    <h2 id="revisa-t" class="h-modal">Tot correcte?</h2>
+    <div class="resum">
+      <div class="resum-svg" id="resum-svg"></div>
+      <dl class="resum-dl">
+        <div><dt>Logotip</dt><dd id="r-escola"></dd></div>
+        <div><dt>Model</dt><dd id="r-model"></dd></div>
+        <div><dt>Text a la tapa</dt><dd id="r-text"></dd></div>
+        <div><dt>Correu</dt><dd id="r-qui"></dd></div>
+      </dl>
+    </div>
+    <p class="nota">Revisa bé majúscules i accents: s'imprimirà <b>exactament</b> com ho has escrit.</p>
+    <p class="error" id="error-envia" role="alert" hidden></p>
+    <div class="modal-botons">
+      <button type="button" class="sec" id="torna">Vull canviar alguna cosa</button>
+      <button type="button" class="cta" id="envia"><span>Envia la comanda</span><i aria-hidden="true">→</i></button>
+    </div>
+  </div>
+</div>
+
+<!-- ───────── ENVIAT ───────── -->
+<div id="enviat" class="modal modal-ok" hidden role="dialog" aria-modal="true" aria-labelledby="enviat-t">
+  <div class="modal-in">
+    <p class="mono eyebrow">Comanda <span id="ok-ref"></span></p>
+    <h2 id="enviat-t" class="h-modal">Apuntat!</h2>
+    <p class="ok-txt" id="ok-txt"></p>
+    <p class="nota" id="ok-prova" hidden>Mode de prova: la web encara no està connectada al full de càlcul i aquesta comanda <b>no s'ha guardat</b>.</p>
+    <div class="modal-botons">
+      <button type="button" class="sec" id="un-altre">Demana'n un altre</button>
+    </div>
+  </div>
+</div>
+
+<noscript><p class="noscript">Aquesta web necessita JavaScript per mostrar els models en 3D.</p></noscript>
+
+<script src="js/config.js"></script>
+<script type="module" src="js/app.js"></script>
+</body>
+</html>
