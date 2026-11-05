@@ -612,13 +612,16 @@ function fotoComanda() {
   try {
     for (const id in M) { vis[id] = M[id].holder.visible; M[id].holder.visible = id === S.model; }
     m.holder.position.set(0, 0, 0); m.holder.rotation.set(.04, Math.PI - .42, 0); m.holder.scale.setScalar(1);
-    renderer.setPixelRatio(1); composer.setPixelRatio(1);
+    renderer.setPixelRatio(2); composer.setPixelRatio(2);   // el doble de punts: nítida a les pantalles d'ara
     renderer.setSize(W, H, false); composer.setSize(W, H);
     camera.aspect = W / H; camera.clearViewOffset(); camera.updateProjectionMatrix();
     camera.position.set(.35, .16, 2.55); camera.lookAt(0, .04, 0);
     escaner.visible = false; halo.material.opacity = .45;
     composer.render();
-    return renderer.domElement.toDataURL('image/jpeg', .86).split(',')[1] || '';
+    // el full accepta fins a 600.000 caràcters: si mai passés de mida, es baixa la qualitat
+    let b64 = '';
+    for (const q of [.9, .8, .68, .55]) { b64 = renderer.domElement.toDataURL('image/jpeg', q).split(',')[1] || ''; if (b64.length < 580000) break; }
+    return b64.length < 580000 ? b64 : '';
   } catch (e) { return ''; }
   finally {
     for (const id in vis) M[id].holder.visible = vis[id];
