@@ -47,8 +47,7 @@ Sense full connectat (`endpoint` buit a `js/config.js`) la web funciona en
 2. Al full: **Extensions → Apps Script**. Esborra el que hi ha, enganxa-hi tot
    el contingut de `apps-script/Code.gs` i desa (icona del disquet).
 3. A dalt, tria la funció **`prepara`** i prem **▶ Executa**. Google demanarà
-   permís per accedir al full: accepta'l. Això crea les pestanyes «Comandes» i
-   «Producció».
+   permís per accedir al full: accepta'l. Això crea la pestanya «Comandes».
 4. **Implementa → Implementació nova** → a la rodeta, tria **Aplicació web**:
    - *Executa com a*: **Jo**
    - *Qui hi té accés*: **Qualsevol usuari**
@@ -82,14 +81,12 @@ nova* perquè la web faci servir el codi nou.
 
 - Pestanya **Comandes**: una fila per comanda (data, referència, logotip,
   correu, text a gravar, model, mida de la lletra, estat).
-- Pestanya **Producció**: `text,model,referencia` de les comandes «Per fer», per
-  al generador de plaques de la Bambu Lab P1S.
-  **Fitxer → Baixa → Valors separats per comes (.csv)** estant en aquesta pestanya.
 - Columna **Estat** (desplegable): cada comanda entra com a **Per fer**; quan va a
-  una placa, **Imprimint**; quan és feta, **Acabat**. «Producció» només mostra les
-  «Per fer» (text, model —amb «Pro » davant per a Vedruna Pro Vic— i referència),
-  i és el que llegeix el generador de plaques. `refesProduccio` hi torna a posar
-  les fórmules i marca com a «Per fer» les comandes sense estat.
+  una placa, **Imprimint**; quan és feta, **Acabat**. El generador de plaques de la
+  Bambu Lab P1S llegeix directament «Comandes» i agafa les files «Per fer» (no hi
+  ha pestanya de producció: en un full en català, les fórmules escrites des de
+  l'script sortien amb comes i donaven #ERROR!). `marcaPerFer` posa «Per fer» a
+  les comandes que no tinguin estat.
 - Si el navegador d'algú envia la mateixa comanda dues vegades, només s'apunta un cop.
 - El text es guarda exactament com l'ha escrit la mestra (majúscules, accents,
   ç, l·l). Un text que comenci per `=`, `+`, `-` o `@` es desa amb un apòstrof

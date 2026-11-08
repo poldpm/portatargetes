@@ -4,14 +4,12 @@
  * Aquest script va LLIGAT al full de càlcul de les comandes
  * (Extensions → Apps Script des del mateix full). Veure LLEGEIX-ME.md.
  *
- * Pestanyes que crea sol:
- *  - «Comandes»:  una fila per comanda, amb tota la informació.
- *  - «Producció»: només text,model — Fitxer → Baixa → CSV d'aquesta pestanya
- *                 i surt el fitxer per generar les plaques de la Bambu Lab.
+ * Pestanya «Comandes»: una fila per comanda, amb tota la informació. Cada comanda
+ * entra com a «Per fer»; el generador de plaques llegeix directament aquesta
+ * pestanya i agafa les files «Per fer». No hi ha cap fórmula que es pugui trencar.
  */
 
 var FULL_COMANDES = 'Comandes';
-var FULL_PRODUCCIO = 'Producció';
 var CAPCALERA = ['Data', 'Referència', 'Logotip', 'Correu', 'Text a gravar', 'Model', 'Mida lletra (mm)', 'Estat', 'Confirmació'];
 /* Codi que es desa a la columna «Model»: el que llegeix el generador de peces 3D.
    Va per logotip: Escorial → A granat, A blanc, B; Pro → A, B.
@@ -56,7 +54,6 @@ function prepara() {
     c.setColumnWidths(1, CAPCALERA.length, 150);
     c.getRange('E:E').setNumberFormat('@');
   }
-  refesProduccio();
   var full1 = ss.getSheetByName('Full 1') || ss.getSheetByName('Sheet1') || ss.getSheetByName('Hoja 1');
   if (full1 && full1.getLastRow() === 0 && ss.getSheets().length > 2) ss.deleteSheet(full1);
   return 'Fet';
@@ -75,27 +72,17 @@ function provaCorreu() {
 var ESTAT_NOU = 'Per fer';   // estat amb què entra cada comanda (desplegable: Per fer, Imprimint, Acabat)
 
 /**
- * Executa-la des de l'editor (botó ▶) un cop:
- *  - posa a «Producció» les fórmules del generador de peces (només les comandes «Per fer»:
- *    text, model —amb «Pro » davant per a Vedruna Pro Vic— i referència);
- *  - marca com a «Per fer» les comandes que tenen l'estat buit.
+ * Executa-la des de l'editor (botó ▶) si mai hi ha comandes amb l'estat buit:
+ * les marca com a «Per fer». (El generador de plaques llegeix directament «Comandes»
+ * i agafa les files «Per fer»: no cal cap pestanya de producció ni cap fórmula.)
  */
-function refesProduccio() {
-  var ss = SpreadsheetApp.getActive();
-  var p = ss.getSheetByName(FULL_PRODUCCIO) || ss.insertSheet(FULL_PRODUCCIO);
-  p.getRange('A1:C').clearContent();
-  p.getRange('A1:C1').setValues([['text', 'model', 'referencia']]).setFontWeight('bold');
-  var c = FULL_COMANDES + '!', perFer = c + 'F2:F<>"", ' + c + 'H2:H="' + ESTAT_NOU + '"';
-  p.getRange('A2').setFormula('=IFERROR(FILTER(' + c + 'E2:E, ' + perFer + '), "")');
-  p.getRange('B2').setFormula('=IFERROR(FILTER(IF(REGEXMATCH(' + c + 'C2:C, "Pro"), "Pro "&' + c + 'F2:F, ' + c + 'F2:F), ' + perFer + '), "")');
-  p.getRange('C2').setFormula('=IFERROR(FILTER(' + c + 'B2:B, ' + perFer + '), "")');
-  // comandes sense estat → «Per fer»
+function marcaPerFer() {
   var sh = full_(), n = sh.getLastRow(), posades = 0;
   if (n > 1) {
     var v = sh.getRange(2, 6, n - 1, 3).getValues();         // F (Model) a H (Estat)
     for (var i = 0; i < v.length; i++) if (v[i][0] !== '' && v[i][2] === '') { sh.getRange(i + 2, 8).setValue(ESTAT_NOU); posades++; }
   }
-  return 'Producció refeta. ' + posades + ' comandes sense estat marcades com a «' + ESTAT_NOU + '».';
+  return posades + ' comandes sense estat marcades com a «' + ESTAT_NOU + '».';
 }
 
 function doGet(e) {
