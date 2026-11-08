@@ -13,8 +13,36 @@
 var FULL_COMANDES = 'Comandes';
 var FULL_PRODUCCIO = 'Producció';
 var CAPCALERA = ['Data', 'Referència', 'Logotip', 'Correu', 'Text a gravar', 'Model', 'Mida lletra (mm)', 'Estat', 'Confirmació'];
-var NOM_MODEL = { 'A granat': 'Clàssic granat', 'A blanc': 'Clàssic blanc', 'B': 'Etiqueta', 'Pro A': 'Clàssic', 'Pro B': 'Etiqueta' };
-var MODELS_VALIDS = ['A granat', 'A blanc', 'B', 'Pro A', 'Pro B'];
+/* Codi que es desa a la columna «Model»: el que llegeix el generador de peces 3D.
+   Va per logotip: Escorial → A granat, A blanc, B; Pro → A, B.
+   La web envia el codi intern (Pro A / Pro B): aquí es tradueix. */
+var CODIS = {
+  'Vedruna Escorial Vic': { 'A granat': 'A granat', 'A blanc': 'A blanc', 'B': 'B' },
+  'Vedruna Pro Vic':      { 'Pro A': 'A', 'Pro B': 'B', 'A': 'A', 'B': 'B' }
+};
+// El nom que veu la mestra (el mateix que a la web)
+var NOM_MODEL = {
+  'Vedruna Escorial Vic': { 'A granat': 'Clàssic granat', 'A blanc': 'Clàssic blanc', 'B': 'Etiqueta' },
+  'Vedruna Pro Vic':      { 'A': 'Clàssic', 'B': 'Etiqueta' }
+};
+function nomModel_(escola, codi) { return (NOM_MODEL[escola] && NOM_MODEL[escola][codi]) || codi; }
+
+/**
+ * Executa-la UN COP des de l'editor (botó ▶): passa les comandes de Pro ja apuntades
+ * de «Pro A» / «Pro B» a «A» / «B», com vol el generador de peces.
+ */
+function arreglaCodisPro() {
+  var sh = full_(), n = sh.getLastRow();
+  if (n < 2) return 'No hi ha comandes.';
+  var r = sh.getRange(2, 3, n - 1, 4), v = r.getValues(), canvis = 0;   // columnes C (Logotip) a F (Model)
+  for (var i = 0; i < v.length; i++) {
+    var escola = v[i][0], model = v[i][3];
+    if (escola === 'Vedruna Pro Vic' && (model === 'Pro A' || model === 'Pro B')) {
+      sh.getRange(i + 2, 6).setValue(CODIS[escola][model]); canvis++;
+    }
+  }
+  return canvis + ' comandes de Vedruna Pro Vic arreglades.';
+}
 var ESCOLES_VALIDES = ['Vedruna Escorial Vic', 'Vedruna Pro Vic'];
 
 /** Executa-la UN COP des de l'editor (botó ▶) per crear les pestanyes. */
@@ -75,14 +103,16 @@ function doPost(e) {
     var text = net_(d.text, 40);
     var correu = net_(d.correu, 120).toLowerCase();
     var model = String(d.model || '');
+    var codis = CODIS[String(d.escola || '')];
+    if (codis && codis[model]) model = codis[model];
     var escola = String(d.escola || '');
     var ref = net_(d.ref, 20);
     var mida = Number(d.midaLletra) || '';
     // la foto 3D que fa la web del seu portatargetes (JPEG en base64); si no hi és o és massa gran, el correu en fa servir una de genèrica
     var foto = typeof d.foto === 'string' && d.foto.length < 600000 && /^[A-Za-z0-9+\/=]+$/.test(d.foto) ? d.foto : '';
 
-    if (MODELS_VALIDS.indexOf(model) < 0) return json_({ ok: false, error: 'Model desconegut.' });
     if (ESCOLES_VALIDES.indexOf(escola) < 0) return json_({ ok: false, error: 'Logotip desconegut.' });
+    if (!codis || !codis[model]) return json_({ ok: false, error: 'Model desconegut.' });
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(correu)) return json_({ ok: false, error: 'Falta un correu electrònic vàlid.' });
     if (!ref) return json_({ ok: false, error: 'Falta la referència.' });
 
@@ -129,7 +159,7 @@ function correuConfirmacio_(correu, ref, escola, model, text, mida, fotoB64) {
 
 function textCorreu_(c) {
   return 'Comanda ' + c.ref + ' rebuda.\n\n' +
-    'Logotip: ' + c.escola + '\nModel: ' + (NOM_MODEL[c.model] || c.model) + '\nText a la tapa: ' + (c.text ? '«' + c.text + '»' : 'sense nom') +
+    'Logotip: ' + c.escola + '\nModel: ' + nomModel_(c.escola, c.model) + '\nText a la tapa: ' + (c.text ? '«' + c.text + '»' : 'sense nom') +
     '\n\nS\'imprimirà exactament així. Si hi ha alguna cosa que no està bé, respon aquest correu.\n\n' + WEB;
 }
 
@@ -140,7 +170,7 @@ function htmlCorreu_(c) {
   var F = "'Fira Sans','Helvetica Neue',Helvetica,Arial,sans-serif";
   var MONO = "'Fira Code',Menlo,Consolas,'Courier New',monospace";
   var mono = function (t, color) { return '<span style="font-family:' + MONO + ';font-size:11px;letter-spacing:2.5px;text-transform:uppercase;color:' + (color || '#a8999d') + '">' + t + '</span>'; };
-  var nomModel = NOM_MODEL[c.model] || c.model;
+  var nomModel = nomModel_(c.escola, c.model);
   var mm = c.mida ? String(Number(c.mida).toFixed(1)).replace('.', ',') + ' mm' : '6,0 mm';
   var foto = c.foto || (WEB + 'assets/img/correu.jpg');
   var fila = function (eti, valor, gran) {

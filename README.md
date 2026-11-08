@@ -26,7 +26,8 @@ Es veu igual a l'ordinador i al mòbil.
 2. **Quin logotip vols?**: dos grans botons, cadascun amb els seus models en 3D al damunt.
    Clicar directament un dels portatargetes porta al configurador d'aquell model.
    Models: Escorial Vic → Clàssic granat, Clàssic blanc, Etiqueta; Pro Vic → Clàssic, Etiqueta.
-   Al full hi van els codis de producció (A granat, A blanc, B, Pro A, Pro B).
+   Al full hi van els codis del generador de peces: Escorial → A granat, A blanc, B;
+   Pro → A, B (la columna Logotip diu de quina escola és).
 3. **Configurador**:
    - el model gira sol; es pot arrossegar amb el dit o el ratolí, o prémer *Davant* / *Darrere*;
    - en escriure el text, el model es gira sol i el nom apareix gravat a la tapa;
