@@ -82,11 +82,14 @@ nova* perquè la web faci servir el codi nou.
 
 - Pestanya **Comandes**: una fila per comanda (data, referència, logotip,
   correu, text a gravar, model, mida de la lletra, estat).
-- Pestanya **Producció**: només `text,model`, ordenat per model, tal com demana
-  el generador de plaques de la Bambu Lab P1S.
+- Pestanya **Producció**: `text,model,referencia` de les comandes «Per fer», per
+  al generador de plaques de la Bambu Lab P1S.
   **Fitxer → Baixa → Valors separats per comes (.csv)** estant en aquesta pestanya.
-- Per anul·lar una comanda sense esborrar-la: escriu `anul·lada` a la columna
-  **Estat**. Desapareix de «Producció».
+- Columna **Estat** (desplegable): cada comanda entra com a **Per fer**; quan va a
+  una placa, **Imprimint**; quan és feta, **Acabat**. «Producció» només mostra les
+  «Per fer» (text, model —amb «Pro » davant per a Vedruna Pro Vic— i referència),
+  i és el que llegeix el generador de plaques. `refesProduccio` hi torna a posar
+  les fórmules i marca com a «Per fer» les comandes sense estat.
 - Si el navegador d'algú envia la mateixa comanda dues vegades, només s'apunta un cop.
 - El text es guarda exactament com l'ha escrit la mestra (majúscules, accents,
   ç, l·l). Un text que comenci per `=`, `+`, `-` o `@` es desa amb un apòstrof
