@@ -321,7 +321,7 @@ function avisaRecollida() {
 
 function provaRecollida() {
   var jo = Session.getEffectiveUser().getEmail();
-  correuRecollida_(jo, [{ ref: 'PT-PROVA', escola: 'Vedruna Escorial Vic', model: 'A granat', text: 'Marina Ginestà' }]);
+  correuRecollida_(jo, [{ ref: 'PT-PROVA', escola: 'Vedruna Escorial Vic', model: 'A granat', text: 'Nom Cognom' }]);
   try { SpreadsheetApp.getUi().alert('T\'he enviat una mostra a ' + jo + '.'); } catch (x) {}
   return 'Mostra enviada a ' + jo;
 }
@@ -329,12 +329,11 @@ function provaRecollida() {
 function correuRecollida_(correu, items) {
   var blob = null;
   try { blob = UrlFetchApp.fetch(WEB + 'assets/img/correu-video.jpg').getBlob().setName('video.jpg'); } catch (x) { blob = null; }
-  var primer = items[0];
   var opcions = {
     to: correu,
     name: 'Portatargetes Vedruna',
     subject: items.length > 1 ? 'Els teus portatargetes ja t\'esperen a la porteria'
-      : (primer.text ? '«' + primer.text + '» ' : 'El teu portatargetes ') + 'ja t\'espera a la porteria',
+      : 'El teu portatargetes ja t\'espera a la porteria',
     body: 'Ja el pots recollir a la ' + LLOC_RECOLLIDA + '.\n\n' +
       items.map(function (it) { return '· ' + (it.text ? '«' + it.text + '»' : 'Sense nom') + ' — ' + nomModel_(it.escola, it.model) + ', ' + it.escola + ' (' + it.ref + ')'; }).join('\n') +
       '\n\nCom es munta (vídeo de 2 minuts): ' + VIDEO,
