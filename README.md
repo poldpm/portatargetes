@@ -93,6 +93,21 @@ nova* perquè la web faci servir el codi nou.
   davant perquè el full no el prengui per una fórmula; a la baixada en CSV
   l'apòstrof no hi surt.
 
+## Avisar que ja el poden recollir
+
+Al full hi ha un menú **Portatargetes** (surt en obrir el full):
+
+1. A «Comandes», selecciona les files de qui ja el té imprès (clica el número de
+   fila; amb Ctrl en tries més d'una).
+2. **Portatargetes → Avisa que ja el poden recollir (files seleccionades)**.
+3. Surt la llista de qui el rebrà (i un avís si alguna fila no està «Acabat»).
+   Confirma-ho.
+
+Cada persona rep un sol correu (amb tots els seus portatargetes): on recollir-lo
+(Porteria de Santa Joaquima), què recull i un botó al vídeo de com es munta
+(`com-funciona.html`). La columna **Avís recollida** guarda quan se li va enviar;
+una fila ja avisada no es torna a enviar. **Envia'm una mostra** te n'envia un a tu.
+
 ## Publicar-la
 
 És una web estàtica: va a GitHub Pages tal com és, sense compilar res.

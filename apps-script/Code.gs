@@ -10,7 +10,7 @@
  */
 
 var FULL_COMANDES = 'Comandes';
-var CAPCALERA = ['Data', 'Referència', 'Logotip', 'Correu', 'Text a gravar', 'Model', 'Mida lletra (mm)', 'Estat', 'Confirmació'];
+var CAPCALERA = ['Data', 'Referència', 'Logotip', 'Correu', 'Text a gravar', 'Model', 'Mida lletra (mm)', 'Estat', 'Confirmació', 'Avís recollida'];
 /* Codi que es desa a la columna «Model»: el que llegeix el generador de peces 3D.
    Va per logotip: Escorial → A granat, A blanc, B; Pro → A, B.
    La web envia el codi intern (Pro A / Pro B): aquí es tradueix. */
@@ -240,6 +240,184 @@ function htmlCorreu_(c) {
       '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top:16px"><tr>' +
       '<td class="nomob">' + mono('60 × 110 × 4,2 mm · imprès en 3D', '#6f6064') + '</td>' +
       '<td align="right" style="white-space:nowrap"><a href="' + WEB + '" style="font-family:' + MONO + ';font-size:11px;letter-spacing:2.5px;text-transform:uppercase;color:#ff4d73;text-decoration:none">Veure la web &rarr;</a></td>' +
+      '</tr></table></td></tr>' +
+
+    '</table></td></tr></table></body></html>';
+}
+
+/* ═══════════════════════════ AVÍS DE RECOLLIDA ═══════════════════════════
+   Al full surt un menú «Portatargetes». Selecciones les files de qui ja el té
+   imprès, tries «Avisa que ja el poden recollir», confirmes, i cada persona rep
+   UN correu (amb tots els seus portatargetes, si en té més d'un). La columna
+   «Avís recollida» guarda quan se li va enviar: una fila avisada no es torna a enviar. */
+
+var COL_AVIS = 10;   // columna J
+var LLOC_RECOLLIDA = 'Porteria de Santa Joaquima';
+var VIDEO = WEB + 'com-funciona.html';
+
+function onOpen() {
+  SpreadsheetApp.getUi().createMenu('Portatargetes')
+    .addItem('Avisa que ja el poden recollir (files seleccionades)', 'avisaRecollida')
+    .addSeparator()
+    .addItem('Envia\'m una mostra del correu de recollida', 'provaRecollida')
+    .addToUi();
+}
+
+function avisaRecollida() {
+  var ui = SpreadsheetApp.getUi();
+  var sh = SpreadsheetApp.getActive().getActiveSheet();
+  if (sh.getName() !== FULL_COMANDES) {
+    ui.alert('Ves a la pestanya «' + FULL_COMANDES + '» i selecciona les files de qui ja el pot recollir.');
+    return;
+  }
+  if (!sh.getRange(1, COL_AVIS).getValue()) sh.getRange(1, COL_AVIS).setValue('Avís recollida').setFontWeight('bold');
+
+  // files seleccionades (pot ser més d'una selecció, amb Ctrl)
+  var files = {};
+  sh.getActiveRangeList().getRanges().forEach(function (r) {
+    for (var f = Math.max(2, r.getRow()); f <= r.getLastRow(); f++) files[f] = true;
+  });
+  var perCorreu = {}, ordre = [], jaAvisades = [], noAcabades = [], buides = 0;
+  Object.keys(files).map(Number).sort(function (a, b) { return a - b; }).forEach(function (f) {
+    var v = sh.getRange(f, 1, 1, COL_AVIS).getValues()[0];
+    var ref = v[1], escola = v[2], correu = String(v[3]).replace(/^'/, '').trim(), text = String(v[4]).replace(/^'/, ''), model = v[5], estat = v[7], avis = v[9];
+    if (!ref || !correu) { buides++; return; }
+    if (avis) { jaAvisades.push(correu + ' (' + ref + ')'); return; }
+    if (estat !== 'Acabat') noAcabades.push(correu + ' (' + ref + ', ' + (estat || 'sense estat') + ')');
+    if (!perCorreu[correu]) { perCorreu[correu] = []; ordre.push(correu); }
+    perCorreu[correu].push({ fila: f, ref: ref, escola: escola, model: model, text: text });
+  });
+
+  if (!ordre.length) {
+    ui.alert('No hi ha ningú per avisar.' +
+      (jaAvisades.length ? '\n\nAquestes ja estaven avisades:\n• ' + jaAvisades.join('\n• ') : '') +
+      '\n\nSelecciona les files (clica el número de fila de l\'esquerra; amb Ctrl en pots triar més d\'una) i torna-ho a provar.');
+    return;
+  }
+  var llista = ordre.map(function (c) {
+    return '• ' + c + ' — ' + perCorreu[c].map(function (it) { return it.text ? '«' + it.text + '»' : 'sense nom'; }).join(', ');
+  }).join('\n');
+  var msg = 'S\'enviarà el correu de «ja el pots recollir» a ' + ordre.length + (ordre.length === 1 ? ' persona' : ' persones') + ':\n\n' + llista;
+  if (noAcabades.length) msg += '\n\n⚠ Compte: aquestes no estan marcades com a «Acabat»:\n• ' + noAcabades.join('\n• ');
+  if (jaAvisades.length) msg += '\n\nNo s\'enviarà a aquestes, perquè ja estaven avisades:\n• ' + jaAvisades.join('\n• ');
+  msg += '\n\nEnvio els correus?';
+  if (ui.alert('Avís de recollida', msg, ui.ButtonSet.YES_NO) !== ui.Button.YES) return;
+
+  var quota = MailApp.getRemainingDailyQuota(), enviats = 0, errors = [], pendents = [];
+  var avui = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'dd/MM/yyyy HH:mm');
+  ordre.forEach(function (c) {
+    if (enviats >= quota) { pendents.push(c); return; }
+    try {
+      correuRecollida_(c, perCorreu[c]);
+      perCorreu[c].forEach(function (it) { sh.getRange(it.fila, COL_AVIS).setValue('Avisat ' + avui); });
+      enviats++;
+    } catch (err) { errors.push(c + ': ' + err.message); }
+  });
+  SpreadsheetApp.flush();
+  ui.alert('Fet: ' + enviats + (enviats === 1 ? ' correu enviat.' : ' correus enviats.') +
+    (pendents.length ? '\n\nAvui ja no queden correus disponibles. Demà torna a seleccionar aquestes:\n• ' + pendents.join('\n• ') : '') +
+    (errors.length ? '\n\nNo s\'han pogut enviar:\n• ' + errors.join('\n• ') : ''));
+}
+
+function provaRecollida() {
+  var jo = Session.getEffectiveUser().getEmail();
+  correuRecollida_(jo, [{ ref: 'PT-PROVA', escola: 'Vedruna Escorial Vic', model: 'A granat', text: 'Marina Ginestà' }]);
+  try { SpreadsheetApp.getUi().alert('T\'he enviat una mostra a ' + jo + '.'); } catch (x) {}
+  return 'Mostra enviada a ' + jo;
+}
+
+function correuRecollida_(correu, items) {
+  var blob = null;
+  try { blob = UrlFetchApp.fetch(WEB + 'assets/img/correu-video.jpg').getBlob().setName('video.jpg'); } catch (x) { blob = null; }
+  var primer = items[0];
+  var opcions = {
+    to: correu,
+    name: 'Portatargetes Vedruna',
+    subject: items.length > 1 ? 'Els teus portatargetes ja t\'esperen a la porteria'
+      : (primer.text ? '«' + primer.text + '» ' : 'El teu portatargetes ') + 'ja t\'espera a la porteria',
+    body: 'Ja el pots recollir a la ' + LLOC_RECOLLIDA + '.\n\n' +
+      items.map(function (it) { return '· ' + (it.text ? '«' + it.text + '»' : 'Sense nom') + ' — ' + nomModel_(it.escola, it.model) + ', ' + it.escola + ' (' + it.ref + ')'; }).join('\n') +
+      '\n\nCom es munta (vídeo de 2 minuts): ' + VIDEO,
+    htmlBody: htmlRecollida_(items, blob ? 'cid:video' : WEB + 'assets/img/correu-video.jpg')
+  };
+  if (blob) opcions.inlineImages = { video: blob };
+  MailApp.sendEmail(opcions);
+}
+
+function htmlRecollida_(items, imatge) {
+  var e = function (v) { return String(v).replace(/[&<>"]/g, function (x) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[x]; }); };
+  var F = "'Fira Sans','Helvetica Neue',Helvetica,Arial,sans-serif";
+  var MONO = "'Fira Code',Menlo,Consolas,'Courier New',monospace";
+  var mono = function (t, color) { return '<span style="font-family:' + MONO + ';font-size:11px;letter-spacing:2.5px;text-transform:uppercase;color:' + (color || '#a8999d') + '">' + t + '</span>'; };
+  var plural = items.length > 1;
+  var escoles = items.map(function (it) { return it.escola; }).filter(function (x, i, a) { return a.indexOf(x) === i; }).join(' · ');
+  var fitxes = items.map(function (it) {
+    return '<tr><td style="padding:16px 0;border-bottom:1px solid #2e2226">' +
+      '<span style="font-family:' + F + ';font-size:24px;line-height:1.25;font-weight:700;color:#efe9e2">' + (it.text ? '«' + e(it.text) + '»' : 'Sense nom') + '</span><br>' +
+      mono(e(nomModel_(it.escola, it.model)) + ' &nbsp;·&nbsp; ' + e(it.escola) + ' &nbsp;·&nbsp; ' + e(it.ref)) + '</td></tr>';
+  }).join('');
+  var consell = function (n, titol, text) {
+    return '<td width="33%" valign="top" style="padding:14px 12px 0 0;border-top:2px solid #3a2a2f">' + mono(n, '#ff4d73') +
+      '<br><span style="font-family:' + F + ';font-size:15px;line-height:1.35;font-weight:500;color:#efe9e2">' + titol + '</span>' +
+      '<br><span style="font-family:' + F + ';font-size:13px;line-height:1.45;color:#a8999d">' + text + '</span></td>';
+  };
+  return '<!doctype html><html lang="ca"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">' +
+    '<meta name="color-scheme" content="dark"><meta name="supported-color-schemes" content="dark">' +
+    '<style>@import url(https://fonts.googleapis.com/css2?family=Fira+Code:wght@400&family=Fira+Sans:wght@200;400;500;700&display=swap);' +
+    '@media (max-width:620px){.pad{padding-left:22px!important;padding-right:22px!important}.titol{font-size:34px!important}.nomob{display:none!important}' +
+    '.col{display:block!important;width:100%!important;padding-right:0!important;margin-bottom:14px}}</style></head>' +
+    '<body style="margin:0;padding:0;background:#0b0608" bgcolor="#0b0608">' +
+    '<div style="display:none;max-height:0;overflow:hidden">Ja el pots recollir a la ' + e(LLOC_RECOLLIDA) + '. I aquí tens el vídeo de com es munta.</div>' +
+    '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#0b0608" style="background:#0b0608"><tr><td align="center" style="padding:28px 10px">' +
+    '<table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" style="width:100%;max-width:600px;background:#110a0d;border:1px solid #2e2226" bgcolor="#110a0d">' +
+
+    // capçalera HUD
+    '<tr><td class="pad" style="padding:22px 40px 0"><table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>' +
+      '<td class="nomob">' + mono('Portatargetes Vedruna') + '</td>' +
+      '<td align="right" style="white-space:nowrap">' + mono('<span style="color:#7fd3a8">&#9679;</span>&nbsp; Llest per recollir', '#efe9e2') + '</td>' +
+    '</tr></table></td></tr>' +
+    '<tr><td style="padding:18px 0 0"><div style="height:1px;line-height:1px;font-size:0;background:#c4123f;background:linear-gradient(90deg,#c4123f,#7a1f34 40%,#110a0d)">&nbsp;</div></td></tr>' +
+
+    // titular
+    '<tr><td class="pad" style="padding:38px 40px 0">' + mono(e(escoles)) +
+      '<h1 class="titol" style="margin:14px 0 0;font-family:' + F + ';font-weight:200;font-size:44px;line-height:1.02;letter-spacing:-1px;color:#efe9e2">' +
+      (plural ? 'Ja els pots' : 'Ja el pots') + '<br><b style="font-weight:700">venir a buscar.</b></h1>' +
+      '<div style="width:64px;height:3px;background:#c4123f;margin-top:18px;font-size:0;line-height:0">&nbsp;</div></td></tr>' +
+
+    // on
+    '<tr><td class="pad" style="padding:30px 40px 0"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#1a0f13;border:1px solid #3a2a2f;border-left:3px solid #c4123f"><tr><td style="padding:20px 22px">' +
+      mono('On el recolliràs') + '<br><span style="font-family:' + F + ';font-size:26px;line-height:1.25;font-weight:700;color:#efe9e2">' + e(LLOC_RECOLLIDA) + '</span>' +
+      '<br><span style="font-family:' + F + ';font-size:15px;line-height:1.5;color:#c9bfc2">Demana-hi ' + (plural ? 'els teus portatargetes' : 'el teu portatargetes') + ' i ja ' + (plural ? 'te\'ls' : 'te\'l') + ' pots endur.</span>' +
+    '</td></tr></table></td></tr>' +
+
+    // què recull
+    '<tr><td class="pad" style="padding:30px 40px 0">' + mono(plural ? 'Els teus portatargetes' : 'El teu portatargetes') +
+      '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top:4px">' + fitxes + '</table></td></tr>' +
+
+    // vídeo
+    '<tr><td class="pad" style="padding:38px 40px 0">' + mono('Abans d\'estrenar-' + (plural ? 'los' : 'lo')) +
+      '<h2 style="margin:10px 0 0;font-family:' + F + ';font-weight:200;font-size:30px;line-height:1.1;letter-spacing:-.5px;color:#efe9e2">Com es munta, <b style="font-weight:700">en 2 minuts.</b></h2>' +
+      '<p style="margin:10px 0 0;font-family:' + F + ';font-size:15px;line-height:1.55;color:#c9bfc2">Posar-hi la targeta, tancar la tapa amb un clic i, si mai cal, treure-la. Sense cap eina.</p></td></tr>' +
+    '<tr><td style="padding:22px 0 0" align="center"><a href="' + VIDEO + '" style="text-decoration:none;display:block">' +
+      '<img src="' + imatge + '" width="600" alt="Mira el vídeo: com es munta el portatargetes (2:20)" style="display:block;width:100%;max-width:600px;height:auto;border:0"></a></td></tr>' +
+    '<tr><td class="pad" align="center" style="padding:24px 40px 0">' +
+      '<table role="presentation" cellpadding="0" cellspacing="0"><tr><td bgcolor="#c4123f" style="background:#c4123f">' +
+      '<a href="' + VIDEO + '" style="display:inline-block;padding:16px 34px;font-family:' + F + ';font-size:16px;font-weight:500;color:#ffffff;text-decoration:none;letter-spacing:.3px">&#9654;&nbsp;&nbsp;Mira el vídeo</a>' +
+      '</td></tr></table></td></tr>' +
+
+    // consells
+    '<tr><td class="pad" style="padding:38px 40px 0"><table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>' +
+      consell('01 · Muntar', 'Fins que faci «clic»', 'Llisca la tapa per les guies fins al final.').replace('<td width', '<td class="col" width') +
+      consell('02 · Fitxar', 'No cal treure la targeta', 'Acosta el portatargetes al lector tal com és.').replace('<td width', '<td class="col" width') +
+      consell('03 · Cuidar-lo', 'Lluny de la calor', 'Ni al sol dins el cotxe ni sobre un radiador.').replace('<td width', '<td class="col" width') +
+    '</tr></table></td></tr>' +
+
+    // peu
+    '<tr><td class="pad" style="padding:36px 40px 30px">' +
+      '<div style="height:1px;line-height:1px;font-size:0;background:#2e2226">&nbsp;</div>' +
+      '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top:16px"><tr>' +
+      '<td class="nomob">' + mono('60 × 110 × 4,2 mm · imprès en 3D', '#6f6064') + '</td>' +
+      '<td align="right" style="white-space:nowrap"><a href="' + VIDEO + '" style="font-family:' + MONO + ';font-size:11px;letter-spacing:2.5px;text-transform:uppercase;color:#ff4d73;text-decoration:none">Vídeo &rarr;</a></td>' +
       '</tr></table></td></tr>' +
 
     '</table></td></tr></table></body></html>';
